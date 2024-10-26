@@ -74,7 +74,7 @@
     <script type="module">
         // Firebase SDKのインポート
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
         // Firebaseプロジェクトの構成情報
         const firebaseConfig = {
@@ -136,6 +136,19 @@
             }
         }
 
+        // 注文を完了にする関数
+        async function markOrderAsComplete(orderId) {
+            const orderRef = doc(db, "orders", orderId);
+            try {
+                await updateDoc(orderRef, {
+                    status: "完了"
+                });
+                console.log("注文が完了しました");
+            } catch (e) {
+                console.error("注文の更新中にエラーが発生しました: ", e);
+            }
+        }
+
         // Firestoreから注文をリアルタイムで取得して表示
         function listenForOrders() {
             const q = query(collection(db, "orders"), orderBy("timestamp"));
@@ -145,7 +158,23 @@
                 snapshot.forEach((doc) => {
                     const order = doc.data();
                     const listItem = document.createElement('li');
-                    listItem.textContent = `テーブル: ${order.table} - 注文: ${order.items.join(', ')} - ステータス: ${order.status}`;
+                    
+                    // ステータスが「未処理」の場合、表示しない
+                    listItem.textContent = `テーブル: ${order.table} - 注文: ${order.items.join(', ')}`;
+                    
+                    // ステータスが「完了」の場合のみ表示
+                    if (order.status === "完了") {
+                        listItem.textContent += " - 状態: 完了";
+                    }
+
+                    // チェックボタンの作成
+                    if (order.status === "未処理") {
+                        const completeButton = document.createElement('button');
+                        completeButton.textContent = "完了";
+                        completeButton.onclick = () => markOrderAsComplete(doc.id);
+                        listItem.appendChild(completeButton);
+                    }
+
                     kitchenListElement.appendChild(listItem);
                 });
             });
