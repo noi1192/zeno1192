@@ -133,6 +133,10 @@
             });
         }
 
+        // 必要な関数を window オブジェクトに追加
+        window.addToOrder = addToOrder;
+        window.confirmOrder = confirmOrder;
+
         // ページ読み込み時に注文リストのリアルタイム取得を開始
         listenForOrders();
     </script>
