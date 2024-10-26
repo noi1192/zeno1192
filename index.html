@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メイド喫茶 注文システム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            gap: 30px;
+        }
+        .container {
+            width: 45%;
+        }
+        button {
+            padding: 10px;
+            margin: 5px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .order-list, .kitchen-list {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 注文入力エリア -->
+    <div class="container">
+        <h2>注文メニュー</h2>
+        <div>
+            <button onclick="addToOrder('クレープ')">クレープ</button>
+            <button onclick="addToOrder('ドーナツ')">ドーナツ</button>
+            <button onclick="addToOrder('バニラアイス')">バニラアイス</button>
+            <button onclick="addToOrder('抹茶アイス')">抹茶アイス</button>
+            <button onclick="addToOrder('チョコアイス')">チョコアイス</button>
+            <button onclick="addToOrder('コーヒー')">コーヒー</button>
+            <button onclick="addToOrder('オレンジジュース')">オレンジジュース</button>
+            <button onclick="addToOrder('メロンソーダ')">メロンソーダ</button>
+        </div>
+        <h3>現在の注文</h3>
+        <ul id="orderList" class="order-list">
+            <!-- 注文内容がここに追加される -->
+        </ul>
+        <button onclick="confirmOrder()">確定</button>
+    </div>
+
+    <!-- キッチンエリア -->
+    <div class="container">
+        <h2>キッチン注文一覧</h2>
+        <ul id="kitchenList" class="kitchen-list">
+            <!-- 確定された注文がここに表示される -->
+        </ul>
+    </div>
+
+    <!-- Firebaseのスクリプト -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
+
+    <script>
+        // Firebaseの初期設定
+        // Import the functions you need from the SDKs you need
+  import { initializeApp } from "firebase/app";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCFEJGcWpCr3MJXrxnvLpK7KzHISYDJcLk",
+    authDomain: "meidokissakaikei.firebaseapp.com",
+    projectId: "meidokissakaikei",
+    storageBucket: "meidokissakaikei.appspot.com",
+    messagingSenderId: "237729791026",
+    appId: "1:237729791026:web:006a0e75efee8e8f77d02b"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const orderList = [];  // 注文内容を格納する配列
+
+        // 注文リストにアイテムを追加する関数
+        function addToOrder(item) {
+            orderList.push(item);
+            displayOrderList();
+        }
+
+        // 現在の注文リストを表示する関数
+        function displayOrderList() {
+            const orderListElement = document.getElementById('orderList');
+            orderListElement.innerHTML = '';
+            orderList.forEach((item) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = item;
+                orderListElement.appendChild(listItem);
+            });
+        }
+
+        // 注文を確定し、Firestoreに送信する関数
+        function confirmOrder() {
+            if (orderList.length === 0) {
+                alert("注文を追加してください。");
+                return;
+            }
+
+            db.collection("orders").add({
+                items: orderList,
+                status: "未処理",
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                console.log("注文が送信されました");
+                orderList.length = 0;  // リセット
+                displayOrderList();
+            })
+            .catch((error) => {
+                console.error("注文の送信中にエラーが発生しました: ", error);
+            });
+        }
+
+        // Firestoreから注文を取得し、リアルタイムで更新
+        db.collection("orders").orderBy("timestamp").onSnapshot((snapshot) => {
+            const kitchenListElement = document.getElementById('kitchenList');
+            kitchenListElement.innerHTML = '';
+            snapshot.forEach((doc) => {
+                const order = doc.data();
+                const listItem = document.createElement('li');
+                listItem.textContent = `注文: ${order.items.join(', ')} - ステータス: ${order.status}`;
+                kitchenListElement.appendChild(listItem);
+            });
+        });
+    </script>
+
+</body>
+</html>
