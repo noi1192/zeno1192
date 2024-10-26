@@ -43,6 +43,18 @@
             <button onclick="addToOrder('オレンジジュース')">オレンジジュース</button>
             <button onclick="addToOrder('メロンソーダ')">メロンソーダ</button>
         </div>
+
+        <h3>テーブル番号</h3>
+        <select id="tableNumber">
+            <option value="" selected disabled>選択してください</option>
+            <option value="1">1番</option>
+            <option value="2">2番</option>
+            <option value="3">3番</option>
+            <option value="4">4番</option>
+            <option value="5">5番</option>
+            <option value="6">6番</option>
+        </select>
+
         <h3>現在の注文</h3>
         <ul id="orderList" class="order-list">
             <!-- 注文内容がここに追加される -->
@@ -99,14 +111,20 @@
 
         // 注文を確定し、Firestoreに送信する関数
         async function confirmOrder() {
+            const tableNumber = document.getElementById('tableNumber').value;
             if (orderList.length === 0) {
                 alert("注文を追加してください。");
+                return;
+            }
+            if (!tableNumber) {
+                alert("テーブル番号を選択してください。");
                 return;
             }
 
             try {
                 await addDoc(collection(db, "orders"), {
                     items: orderList,
+                    table: tableNumber,
                     status: "未処理",
                     timestamp: new Date()
                 });
@@ -127,7 +145,7 @@
                 snapshot.forEach((doc) => {
                     const order = doc.data();
                     const listItem = document.createElement('li');
-                    listItem.textContent = `注文: ${order.items.join(', ')} - ステータス: ${order.status}`;
+                    listItem.textContent = `テーブル: ${order.table} - 注文: ${order.items.join(', ')} - ステータス: ${order.status}`;
                     kitchenListElement.appendChild(listItem);
                 });
             });
