@@ -59,31 +59,24 @@
     </div>
 
     <!-- Firebaseのスクリプト -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
+    <script type="module">
+        // Firebase SDKのインポート
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-    <script>
-        // Firebaseの初期設定
-        // Import the functions you need from the SDKs you need
-  import { initializeApp } from "firebase/app";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+        // Firebaseプロジェクトの構成情報
+        const firebaseConfig = {
+            apiKey: "AIzaSyCFEJGcWpCr3MJXrxnvLpK7KzHISYDJcLk",
+            authDomain: "meidokissakaikei.firebaseapp.com",
+            projectId: "meidokissakaikei",
+            storageBucket: "meidokissakaikei.appspot.com",
+            messagingSenderId: "237729791026",
+            appId: "1:237729791026:web:006a0e75efee8e8f77d02b"
+        };
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCFEJGcWpCr3MJXrxnvLpK7KzHISYDJcLk",
-    authDomain: "meidokissakaikei.firebaseapp.com",
-    projectId: "meidokissakaikei",
-    storageBucket: "meidokissakaikei.appspot.com",
-    messagingSenderId: "237729791026",
-    appId: "1:237729791026:web:006a0e75efee8e8f77d02b"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // Firebaseの初期化
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
         const orderList = [];  // 注文内容を格納する配列
 
@@ -105,38 +98,43 @@
         }
 
         // 注文を確定し、Firestoreに送信する関数
-        function confirmOrder() {
+        async function confirmOrder() {
             if (orderList.length === 0) {
                 alert("注文を追加してください。");
                 return;
             }
 
-            db.collection("orders").add({
-                items: orderList,
-                status: "未処理",
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then(() => {
+            try {
+                await addDoc(collection(db, "orders"), {
+                    items: orderList,
+                    status: "未処理",
+                    timestamp: new Date()
+                });
                 console.log("注文が送信されました");
-                orderList.length = 0;  // リセット
+                orderList.length = 0;  // 注文リストをリセット
                 displayOrderList();
-            })
-            .catch((error) => {
-                console.error("注文の送信中にエラーが発生しました: ", error);
+            } catch (e) {
+                console.error("注文の送信中にエラーが発生しました: ", e);
+            }
+        }
+
+        // Firestoreから注文をリアルタイムで取得して表示
+        function listenForOrders() {
+            const q = query(collection(db, "orders"), orderBy("timestamp"));
+            onSnapshot(q, (snapshot) => {
+                const kitchenListElement = document.getElementById('kitchenList');
+                kitchenListElement.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const order = doc.data();
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `注文: ${order.items.join(', ')} - ステータス: ${order.status}`;
+                    kitchenListElement.appendChild(listItem);
+                });
             });
         }
 
-        // Firestoreから注文を取得し、リアルタイムで更新
-        db.collection("orders").orderBy("timestamp").onSnapshot((snapshot) => {
-            const kitchenListElement = document.getElementById('kitchenList');
-            kitchenListElement.innerHTML = '';
-            snapshot.forEach((doc) => {
-                const order = doc.data();
-                const listItem = document.createElement('li');
-                listItem.textContent = `注文: ${order.items.join(', ')} - ステータス: ${order.status}`;
-                kitchenListElement.appendChild(listItem);
-            });
-        });
+        // ページ読み込み時に注文リストのリアルタイム取得を開始
+        listenForOrders();
     </script>
 
 </body>
