@@ -90,11 +90,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const orderList = [];  // 注文内容を格納する配列
+        const orderList = {};  // 注文内容を格納するオブジェクト（アイテム名と数量のペア）
 
         // 注文リストにアイテムを追加する関数
         function addToOrder(item) {
-            orderList.push(item);
+            if (orderList[item]) {
+                orderList[item] += 1;  // 同じアイテムがすでにある場合は数量を増やす
+            } else {
+                orderList[item] = 1;   // 新しいアイテムの場合は数量を1に設定
+            }
             displayOrderList();
         }
 
@@ -102,17 +106,17 @@
         function displayOrderList() {
             const orderListElement = document.getElementById('orderList');
             orderListElement.innerHTML = '';
-            orderList.forEach((item) => {
+            for (const [item, quantity] of Object.entries(orderList)) {
                 const listItem = document.createElement('li');
-                listItem.textContent = item;
+                listItem.textContent = quantity > 1 ? `${item} *${quantity}` : item;
                 orderListElement.appendChild(listItem);
-            });
+            }
         }
 
         // 注文を確定し、Firestoreに送信する関数
         async function confirmOrder() {
             const tableNumber = document.getElementById('tableNumber').value;
-            if (orderList.length === 0) {
+            if (Object.keys(orderList).length === 0) {
                 alert("注文を追加してください。");
                 return;
             }
@@ -121,15 +125,22 @@
                 return;
             }
 
+            // 注文内容をリスト形式に変換
+            const orderItems = [];
+            for (const [item, quantity] of Object.entries(orderList)) {
+                orderItems.push(quantity > 1 ? `${item} *${quantity}` : item);
+            }
+
             try {
                 await addDoc(collection(db, "orders"), {
-                    items: orderList,
+                    items: orderItems,
                     table: tableNumber,
                     status: "未処理",
                     timestamp: new Date()
                 });
                 console.log("注文が送信されました");
-                orderList.length = 0;  // 注文リストをリセット
+                // 注文リストをリセット
+                Object.keys(orderList).forEach(key => delete orderList[key]);
                 displayOrderList();
             } catch (e) {
                 console.error("注文の送信中にエラーが発生しました: ", e);
