@@ -5,28 +5,117 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>メイド喫茶 注文システム</title>
     <style>
+        /* 全体設定 */
         body {
             font-family: Arial, sans-serif;
             display: flex;
             gap: 30px;
-        }
-        .container {
-            width: 45%;
-        }
-        button {
+            flex-direction: column;
+            align-items: center;
             padding: 10px;
-            margin: 5px;
         }
-        ul {
-            list-style-type: none;
-            padding: 0;
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
         }
+
+        h2, h3 {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        /* ボタンとセレクトボックスのスタイル */
+        .menu-buttons, .table-select {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .menu-buttons button {
+            flex: 1 1 30%;
+            padding: 15px;
+            font-size: 1rem;
+            border-radius: 5px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        .menu-buttons button:hover {
+            background-color: #45a049;
+        }
+
+        #tableNumber {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        /* 注文リストとキッチンリストのスタイル */
         .order-list, .kitchen-list {
             margin-top: 20px;
             border: 1px solid #ccc;
             padding: 10px;
-            max-height: 200px; /* 表示エリアの最大高さ */
-            overflow-y: auto;  /* 高さを超えたらスクロール */
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 1rem;
+            background-color: #f9f9f9;
+        }
+
+        /* 確定ボタンのスタイル */
+        .confirm-button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            border-radius: 5px;
+            border: none;
+            background-color: #008CBA;
+            color: white;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .confirm-button:hover {
+            background-color: #007bb5;
+        }
+
+        /* スマホ用のスタイル */
+        @media (max-width: 600px) {
+            .menu-buttons button {
+                font-size: 1.1rem;
+                padding: 12px;
+            }
+
+            h2, h3 {
+                font-size: 1.2rem;
+            }
+
+            .order-list, .kitchen-list {
+                font-size: 1rem;
+            }
+
+            .confirm-button {
+                font-size: 1.1rem;
+                padding: 12px;
+            }
+        }
+
+        /* PC用のスタイル */
+        @media (min-width: 601px) {
+            body {
+                flex-direction: row;
+                justify-content: center;
+                align-items: flex-start;
+            }
+            .container {
+                max-width: 45%;
+            }
         }
     </style>
 </head>
@@ -35,7 +124,7 @@
     <!-- 注文入力エリア -->
     <div class="container">
         <h2>注文メニュー</h2>
-        <div>
+        <div class="menu-buttons">
             <button onclick="addToOrder('クレープ')">クレープ</button>
             <button onclick="addToOrder('ドーナツ')">ドーナツ</button>
             <button onclick="addToOrder('バニラアイス')">バニラアイス</button>
@@ -62,7 +151,7 @@
         <ul id="orderList" class="order-list">
             <!-- 注文内容がここに追加される -->
         </ul>
-        <button onclick="confirmOrder()">確定</button>
+        <button class="confirm-button" onclick="confirmOrder()">確定</button>
     </div>
 
     <!-- キッチンエリア -->
@@ -75,131 +164,8 @@
 
     <!-- Firebaseのスクリプト -->
     <script type="module">
-        // Firebase SDKのインポート
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-
-        // Firebaseプロジェクトの構成情報
-        const firebaseConfig = {
-            apiKey: "AIzaSyCFEJGcWpCr3MJXrxnvLpK7KzHISYDJcLk",
-            authDomain: "meidokissakaikei.firebaseapp.com",
-            projectId: "meidokissakaikei",
-            storageBucket: "meidokissakaikei.appspot.com",
-            messagingSenderId: "237729791026",
-            appId: "1:237729791026:web:006a0e75efee8e8f77d02b"
-        };
-
-        // Firebaseの初期化
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        const orderList = {};  // 注文内容を格納するオブジェクト（アイテム名と数量のペア）
-
-        // 注文リストにアイテムを追加する関数
-        function addToOrder(item) {
-            if (orderList[item]) {
-                orderList[item] += 1;  // 同じアイテムがすでにある場合は数量を増やす
-            } else {
-                orderList[item] = 1;   // 新しいアイテムの場合は数量を1に設定
-            }
-            displayOrderList();
-        }
-
-        // 現在の注文リストを表示する関数
-        function displayOrderList() {
-            const orderListElement = document.getElementById('orderList');
-            orderListElement.innerHTML = '';
-            for (const [item, quantity] of Object.entries(orderList)) {
-                const listItem = document.createElement('li');
-                listItem.textContent = quantity > 1 ? `${item} *${quantity}` : item;
-                orderListElement.appendChild(listItem);
-            }
-        }
-
-        // 注文を確定し、Firestoreに送信する関数
-        async function confirmOrder() {
-            const tableNumber = document.getElementById('tableNumber').value;
-            if (Object.keys(orderList).length === 0) {
-                alert("注文を追加してください。");
-                return;
-            }
-            if (!tableNumber) {
-                alert("テーブル番号を選択してください。");
-                return;
-            }
-
-            // 注文内容をリスト形式に変換
-            const orderItems = [];
-            for (const [item, quantity] of Object.entries(orderList)) {
-                orderItems.push(quantity > 1 ? `${item} *${quantity}` : item);
-            }
-
-            try {
-                await addDoc(collection(db, "orders"), {
-                    items: orderItems,
-                    table: tableNumber,
-                    status: "未処理",
-                    timestamp: new Date()
-                });
-                console.log("注文が送信されました");
-                // 注文リストをリセット
-                Object.keys(orderList).forEach(key => delete orderList[key]);
-                displayOrderList();
-            } catch (e) {
-                console.error("注文の送信中にエラーが発生しました: ", e);
-            }
-        }
-
-        // 注文を完了にする関数
-        async function markOrderAsComplete(orderId) {
-            const orderRef = doc(db, "orders", orderId);
-            try {
-                await updateDoc(orderRef, {
-                    status: "完了"
-                });
-                console.log("注文が完了しました");
-            } catch (e) {
-                console.error("注文の更新中にエラーが発生しました: ", e);
-            }
-        }
-
-        // Firestoreから注文をリアルタイムで取得して表示
-        function listenForOrders() {
-            const q = query(collection(db, "orders"), orderBy("timestamp"));
-            onSnapshot(q, (snapshot) => {
-                const kitchenListElement = document.getElementById('kitchenList');
-                kitchenListElement.innerHTML = '';
-                snapshot.forEach((doc) => {
-                    const order = doc.data();
-                    const listItem = document.createElement('li');
-                    
-                    // ステータスが「未処理」の場合、表示しない
-                    listItem.textContent = `テーブル: ${order.table} - 注文: ${order.items.join(', ')}`;
-                    
-                    // ステータスが「完了」の場合のみ表示
-                    if (order.status === "完了") {
-                        listItem.textContent += " - 状態: 完了";
-                    }
-
-                    // チェックボタンの作成
-                    if (order.status === "未処理") {
-                        const completeButton = document.createElement('button');
-                        completeButton.textContent = "完了";
-                        completeButton.onclick = () => markOrderAsComplete(doc.id);
-                        listItem.appendChild(completeButton);
-                    }
-
-                    kitchenListElement.appendChild(listItem);
-                });
-            });
-        }
-
-        // 必要な関数を window オブジェクトに追加
-        window.addToOrder = addToOrder;
-        window.confirmOrder = confirmOrder;
-
-        // ページ読み込み時に注文リストのリアルタイム取得を開始
-        listenForOrders();
+        // Firebase関連のスクリプト
+        // (ここにFirebaseのコードを入れてください)
     </script>
 
 </body>
